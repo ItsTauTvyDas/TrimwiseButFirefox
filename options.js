@@ -1,27 +1,44 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const batchSizeRange = document.getElementById('batchSizeRange');
-    const batchSizeValue = document.getElementById('batchSizeValue');
-    const saveButton = document.getElementById('saveButton');
+const ext = (typeof browser !== "undefined") ? browser : chrome;
 
-    // Load and apply saved settings
-    chrome.storage.sync.get('batchSize', (data) => {
-        if (data.batchSize) {
-            batchSizeRange.value = data.batchSize;
-            batchSizeValue.textContent = `${data.batchSize} messages`;
-        }
-    });
+function storageSyncGet(keys) {
+  return new Promise((resolve) => {
+    const maybePromise = ext.storage.sync.get(keys, (result) => resolve(result));
+    if (maybePromise && typeof maybePromise.then === "function") {
+      maybePromise.then(resolve);
+    }
+  });
+}
 
-    // Update displayed value when range input changes
-    batchSizeRange.addEventListener('input', () => {
-        batchSizeValue.textContent = `${batchSizeRange.value} messages`;
-    });
+function storageSyncSet(obj) {
+  return new Promise((resolve) => {
+    const maybePromise = ext.storage.sync.set(obj, () => resolve());
+    if (maybePromise && typeof maybePromise.then === "function") {
+      maybePromise.then(() => resolve());
+    }
+  });
+}
 
-    // Save settings when button is clicked
-    saveButton.addEventListener('click', () => {
-        const selectedSize = batchSizeRange.value;
-        chrome.storage.sync.set({ batchSize: selectedSize }, () => {
-            alert('Settings saved. Please reload the chat page for changes to take effect.');
-        });
-    });
+document.addEventListener("DOMContentLoaded", async () => {
+  const batchSizeRange = document.getElementById("batchSizeRange");
+  const batchSizeValue = document.getElementById("batchSizeValue");
+  const saveButton = document.getElementById("saveButton");
+
+  // Load and apply saved settings
+  const data = await storageSyncGet("batchSize");
+  if (data.batchSize) {
+    batchSizeRange.value = data.batchSize;
+    batchSizeValue.textContent = `${data.batchSize} messages`;
+  }
+
+  // Update displayed value when range input changes
+  batchSizeRange.addEventListener("input", () => {
+    batchSizeValue.textContent = `${batchSizeRange.value} messages`;
+  });
+
+  // Save settings when button is clicked
+  saveButton.addEventListener("click", async () => {
+    const selectedSize = batchSizeRange.value;
+    await storageSyncSet({ batchSize: selectedSize });
+    alert("Settings saved. Please reload the chat page for changes to take effect.");
+  });
 });
-
